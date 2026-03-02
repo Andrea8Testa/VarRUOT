@@ -767,31 +767,7 @@ class VarRUOT_WFR():
         return tot_loss, action_loss, matching_loss, ot_loss, HJB_loss, PINN_loss, prob_loss
     
 
-
-
-    def visualize2dresult(self, save_path=None, highlight_times=None):
-
-        import os
-        import numpy as np
-        import torch
-        import matplotlib.pyplot as plt
-        from matplotlib.collections import LineCollection
-        from sklearn.decomposition import PCA
-
-
-        sampled_data = self.dataset.sample_particles_batch(self.cfg.valid_batchsize)
-        print(sampled_data[0].shape[0])
-        particles = list(sampled_data.values())
-        x0 = particles[0].clone().detach()
-        
-
-        m0 = torch.ones(x0.shape[0], device=x0.device, dtype=x0.dtype)
-        m0 = m0 / m0.sum()  
-        
-
-        all_data = self.dataset.get_all_particles_batch()
-        all_particles = list(all_data.values())
-        
+    def integrate_dynamics_plot(self, x0, m0):
 
         def dynamics(t, state):
             x, m = state  # x shape: [batch, orig_dim] ; m shape: [batch]
@@ -803,7 +779,6 @@ class VarRUOT_WFR():
                 g_val = g_val.squeeze(-1)
             dm_dt = g_val * m
             return dx_dt, dm_dt
-
 
         t_samples = torch.linspace(
             0, self.dataset.max_time, self.cfg.visualize_timesteps,
@@ -836,12 +811,38 @@ class VarRUOT_WFR():
             traj_x.append(state[0])
             traj_m.append(state[1])
         
-
         traj_x = torch.stack(traj_x, dim=0)  # shape: [timesteps, batch, orig_dim]
         traj_m = torch.stack(traj_m, dim=0)  # shape: [timesteps, batch]
-        x_traj_np = traj_x.cpu().detach().numpy()
 
+        return traj_x, traj_m, t_samples
+
+
+    def visualize2dresult(self, save_path=None, highlight_times=None):
+
+        import os
+        import numpy as np
+        import torch
+        import matplotlib.pyplot as plt
+        from matplotlib.collections import LineCollection
+        from sklearn.decomposition import PCA
+
+
+        sampled_data = self.dataset.sample_particles_batch(self.cfg.valid_batchsize)
+        print(sampled_data[0].shape[0])
+        particles = list(sampled_data.values())
+        x0 = particles[0].clone().detach()
+        
+
+        m0 = torch.ones(x0.shape[0], device=x0.device, dtype=x0.dtype)
+        m0 = m0 / m0.sum()  
+        
+        traj_x, traj_m, t_samples = self.integrate_dynamics_plot(x0, m0)
+
+        x_traj_np = traj_x.cpu().detach().numpy()
         m_traj_np = traj_m.cpu().detach().numpy() * sampled_data[0].shape[0]
+
+        all_data = self.dataset.get_all_particles_batch()
+        all_particles = list(all_data.values())
         
         num_timesteps, batch_size, orig_dim = x_traj_np.shape
 
