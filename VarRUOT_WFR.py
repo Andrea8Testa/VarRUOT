@@ -12,6 +12,7 @@ import torchsde
 import os
 import pandas as pd
 import ot
+import seaborn as sns
 
 
 
@@ -1166,7 +1167,7 @@ class VarRUOT_WFR():
             path = os.path.join("figs", save_path + ".jpg")
             plt.savefig(path, dpi=300)
 
-    def visualize2dgrowth(self, grid_range=(-1.5, 1.5), num_points=50, t=0):
+    def visualize2dgrowth(self, grid_range=(-1.5, 1.5), num_points=50, t=0, save_path="plot.png"):
 
         x_vals = np.linspace(grid_range[0], grid_range[1], num_points)
         y_vals = np.linspace(grid_range[0], grid_range[1], num_points)
@@ -1199,19 +1200,24 @@ class VarRUOT_WFR():
         growth = growth.view(XX.shape).cpu().numpy()
 
         plt.figure(figsize=(6, 5))
-        cp = plt.contourf(XX, YY, growth, levels=50, cmap='jet')
+        cp = plt.contourf(XX, YY, growth, levels=50, cmap='rainbow')
         plt.contour(XX, YY, growth, levels=15, colors='k', linewidths=0.5)
-        if orig_dim > 2:
+        """if orig_dim > 2:
             plt.title("Growth (PCA Projection)")
             plt.xlabel("PC1")
             plt.ylabel("PC2")
         else:
             plt.title("Growth")
             plt.xlabel("x")
-            plt.ylabel("y")
+            plt.ylabel("y")"""
         plt.colorbar(cp, label="growth")
         plt.tight_layout()
-        plt.show()
+        if save_path is None:
+            plt.show()
+        else:
+            os.makedirs("figs", exist_ok=True)
+            path = os.path.join("figs", save_path)
+            plt.savefig(path, dpi=300, bbox_inches='tight', pad_inches=0)
 
     def visualizedatagrowth(self, save_path=None):
 
@@ -1287,10 +1293,18 @@ class VarRUOT_WFR():
                     path = os.path.join("figs", save_path + ".jpg")
                     plt.savefig(path, dpi=300)
                 return  
-            else:
+            elif dim_method == 'pca':
                 pca = PCA(n_components=2)
                 ps_2d = pca.fit_transform(ps)
                 xlabel, ylabel = "PC1", "PC2"
+            elif dim_method == 'raw':
+                class Reducer:
+                    def transform(self, x):
+                        return x[..., :2]
+                reducer_obj = Reducer()
+                ps_2d = reducer_obj.transform(ps)
+            else:
+                raise ValueError
         else:
             ps_2d = ps
             xlabel, ylabel = "x", "y"
@@ -1300,7 +1314,10 @@ class VarRUOT_WFR():
         ys = ps_2d[:, 1]
 
         plt.figure(figsize=(8, 6))
-        sc = plt.scatter(xs, ys, c=gs, cmap='viridis', s=30, alpha=0.3)
+        vmax_value = np.percentile(gs, 99)
+        # sc = plt.scatter(xs, ys, c=gs, cmap='coolwarm', s=30, alpha=0.7) # rainbow
+        sc = plt.scatter(xs, ys, c=gs, cmap=sns.color_palette("icefire", as_cmap=True),
+                 marker='o', alpha=0.7, vmax=vmax_value)
         # plt.xlabel(xlabel)
         # plt.ylabel(ylabel)
         plt.xticks([])
@@ -1317,7 +1334,7 @@ class VarRUOT_WFR():
             plt.show()
         else:
             os.makedirs("figs", exist_ok=True)
-            path = os.path.join("figs", save_path + ".jpg")
+            path = os.path.join("figs", save_path + ".png")
             plt.savefig(path, dpi=300, bbox_inches='tight', pad_inches=0)
 
 

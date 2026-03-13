@@ -38,7 +38,7 @@ def quantitative_test(
 
         n1 = x_pred[closest_idx].shape[0]
         n2 = x_ref[idx].shape[0]
-        slice_size = min(n1, n2, batch_size_max)
+        """slice_size = min(n1, n2, batch_size_max)
 
         d = 0
         for j in range(n_tests):
@@ -51,7 +51,8 @@ def quantitative_test(
 
             d += loss(w1_subset, x1_subset, w2_subset, x2_subset)
         
-        measure_pos = d / n_tests
+        measure_pos = d / n_tests"""
+        measure_pos = loss(pred_weights, x_pred[closest_idx], ref_weights, x_ref[idx]) ** (1/ p)
         evaluation_pos.append(measure_pos)
 
         measure_mass = (m_pred_sum[closest_idx] - m_ref[idx]).pow(2)

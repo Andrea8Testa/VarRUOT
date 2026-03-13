@@ -364,6 +364,36 @@ class Gaussian100Dataset():
         return particles_dict
     
 
+class ZebrafishDataset():
+    def __init__(self):
+        self.csv_path = "./datasets/Zebrafish.csv"
+        self.df = pd.read_csv(self.csv_path)
+        self.cfg = Config()
+        self.time_steps = np.array([0., 1., 2., 3., 4., 5., 6.])
+        self.relative_mass = None
+        self.max_time = np.max(self.time_steps)
+        
+    def get_certain_time_data(self, t):
+        return self.df[self.df["samples"] == t].iloc[:,1:].values
     
+    def sample_batch(self, x, batch_size):
+        indices = torch.randint(0, len(x), (batch_size,))
+        return torch.tensor(x[indices.numpy()], dtype=torch.float32)
+    
+    def sample_particles_batch(self, batch_size):
+        particles_dict = {}
 
+        for time in self.time_steps:
+            this_batch = self.sample_batch(self.get_certain_time_data(time), batch_size)
+            particles_dict[time] = this_batch.to(self.cfg.device)
+
+        return particles_dict
     
+    def get_all_particles_batch(self,):
+        particles_dict = {}
+
+        for time in self.time_steps:
+            this_batch = torch.tensor(self.get_certain_time_data(time), dtype=torch.float32)
+            particles_dict[time] = this_batch.to(self.cfg.device)
+
+        return particles_dict
