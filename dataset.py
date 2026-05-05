@@ -397,3 +397,48 @@ class ZebrafishDataset():
             particles_dict[time] = this_batch.to(self.cfg.device)
 
         return particles_dict
+
+
+class UCF101Dataset:
+    def __init__(self):
+        # self.data_path = "./datasets/ucf101_breaststroke_latents_new.pt"
+        self.data_path = "./datasets/ucf101_blowing_latents.pt"
+        # self.data = torch.load(self.data_path)  # [N, T, D]
+        self.data = torch.load(self.data_path)[9:10, :35]  # [N, T, D]
+        # self.data = torch.load(self.data_path)[1:2, :35]  # [N, T, D]
+        self.data = self.data[:, ::7]  # [N, T, D]
+        print("self.data: ", self.data.shape)
+        self.N, self.T, self.D = self.data.shape
+        self.cfg = Config()
+        self.time_steps = np.arange(self.T, dtype=float)
+        self.max_time = np.max(self.time_steps)
+        self.relative_mass = None
+
+    def get_certain_time_data(self, t):
+        t = int(t)
+        return self.data[:, t, :]  # [N, D]
+
+    def sample_batch(self, x, batch_size):
+        # indices = torch.randint(0, x.shape[0], (batch_size,))
+        # no rep
+        # indices = torch.randperm(x.shape[0])[:batch_size]
+        return x[:batch_size]
+
+    def sample_particles_batch(self, batch_size):
+        particles_dict = {}
+
+        for time in self.time_steps:
+            x = self.get_certain_time_data(time)
+            batch = self.sample_batch(x, batch_size)
+            particles_dict[time] = batch.to(self.cfg.device)
+
+        return particles_dict
+
+    def get_all_particles_batch(self):
+        particles_dict = {}
+
+        for time in self.time_steps:
+            x = self.get_certain_time_data(time)
+            particles_dict[time] = x.to(self.cfg.device)
+
+        return particles_dict

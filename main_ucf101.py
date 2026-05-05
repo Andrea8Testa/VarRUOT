@@ -9,6 +9,7 @@ from visualization_utils import visualizeresult
 import numpy as np
 
 # Get arguments
+print(f"Started program")
 parser = ArgumentParser()
 parser.add_argument("--name", type=int, default=0)
 args = parser.parse_args()
@@ -17,13 +18,13 @@ path_name = f"ucf_{args.name}"
 path_name_growth = f"ucf_{args.name}_growth"
 
 dataset = UCF101Dataset()
-multipliermodel = MultiplierModel(data_dim=4096)
-# state_dict = torch.load("checkpoints/ucf_0_best_multiplyer_model.pt")
-# multipliermodel.load_state_dict(state_dict)
+multipliermodel = MultiplierModel(data_dim=2048)
+state_dict = torch.load("checkpoints/ucf_0_best_multiplyer_model.pt")
+multipliermodel.load_state_dict(state_dict)
 num_params = sum(p.numel() for p in multipliermodel.parameters() if p.requires_grad)
 print(f"Trainable parameters: {num_params}")
 my_ruot = VarRUOT_WFR(dataset, multiplyer_model=multipliermodel)
-train(my_ruot, save_path=path_name)
+# train(my_ruot, save_path=path_name)
 
 x_dict = dataset.get_all_particles_batch()
 particles = len(list(x_dict.values()))
@@ -34,8 +35,8 @@ t_samples = torch.linspace(0, dataset.max_time, 10 * (particles-1),
                            device=x0.device, dtype=x0.dtype)
 x_traj, m_traj, _ = my_ruot.integrate_dynamics_plot(x0, m0)
 
-np.save("x_pred.npy", x_traj.cpu().detach().numpy())
-np.save("x0.npy", x0.cpu().detach().numpy())
+np.save("x_pred_blow.npy", x_traj.cpu().detach().numpy())
+np.save("x0_blow.npy", x0.cpu().detach().numpy())
 results = torch.cat([x_traj, m_traj.unsqueeze(-1)], dim=-1)
 visualizeresult(dataset, results, path_name, "umap", 
                 highlight_times=[0.00, 0.25, 0.50, 0.75, 1.00], visualization_batch=750)
