@@ -9,19 +9,23 @@ def quantitative_test(
     end_time: float = 1.0
     ):
 
-    loss = SamplesLoss("sinkhorn", p=p, blur=1e-5, scaling=0.99)
-    # loss = SamplesLoss("sinkhorn", p=p)
+    # loss = SamplesLoss("sinkhorn", p=p, blur=1e-5, scaling=0.99)
+    loss = SamplesLoss("sinkhorn", p=p, blur=0.05, scaling=0.9)
 
     results_tensor = results.detach()
     x_pred = results_tensor[..., :-1]
     m_pred = results_tensor[..., -1]
     m_pred_sum = torch.sum(m_pred, dim=-1) / torch.sum(m_pred[0], dim=-1)
+    print("m_pred_sum: ", m_pred_sum)
     t_pred = torch.linspace(start_time, end_time, x_pred.shape[0])
 
     all_data = dataset.get_all_particles_batch()
     x_ref = [x for x in all_data.values()]
 
-    m_ref = [data.shape[0] / x_ref[0].shape[0] for data in x_ref]
+    if dataset.relative_mass is None:
+        m_ref = [data.shape[0] / x_ref[0].shape[0] for data in x_ref]
+    else:
+        m_ref = dataset.relative_mass
     
     t_ref = torch.linspace(start_time, end_time, len(x_ref))
 
@@ -38,7 +42,7 @@ def quantitative_test(
 
         n1 = x_pred[closest_idx].shape[0]
         n2 = x_ref[idx].shape[0]
-        """slice_size = min(n1, n2, batch_size_max)
+        slice_size = min(n1, n2, batch_size_max)
 
         d = 0
         for j in range(n_tests):
@@ -49,12 +53,16 @@ def quantitative_test(
             x2_subset = x_ref[idx][indices_2]
             w2_subset = ref_weights[indices_2]
 
-            d += loss(w1_subset, x1_subset, w2_subset, x2_subset)
+            w1_subset = w1_subset / w1_subset.sum()
+            w2_subset = w2_subset / w2_subset.sum()
+
+            d += loss(w1_subset, x1_subset, w2_subset, x2_subset) ** (1/p)
         
-        measure_pos = d / n_tests"""
-        measure_pos = loss(pred_weights, x_pred[closest_idx], ref_weights, x_ref[idx]) ** (1/ p)
+        measure_pos = d / n_tests
+        # measure_pos = loss(pred_weights, x_pred[closest_idx], ref_weights, x_ref[idx]) ** (1/ p)
         evaluation_pos.append(measure_pos)
 
         measure_mass = (m_pred_sum[closest_idx] - m_ref[idx]).pow(2)
         evaluation_mass.append(measure_mass)
+    
     return evaluation_pos, evaluation_mass

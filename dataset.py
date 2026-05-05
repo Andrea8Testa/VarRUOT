@@ -399,6 +399,54 @@ class ZebrafishDataset():
         return particles_dict
 
 
+class FFHQDataset():
+    def __init__(self, input_data="CHILDREN", target_data="ADULT"):
+        latents = np.load("/home/tea1rng/unbalanced_workspace/baselines/LightSB/data/latents.npy")
+        gender = np.load("/home/tea1rng/unbalanced_workspace/baselines/LightSB/data/gender.npy")
+        age = np.load("/home/tea1rng/unbalanced_workspace/baselines/LightSB/data/age.npy")
+        # test_inp_images = np.load("/home/tea1rng/unbalanced_workspace/baselines/LightSB/data/test_images.npy")
+
+        def get_mask(gender, age, category):
+            if category == "MAN":
+                return (gender == "male").reshape(-1)
+            elif category == "WOMAN":
+                return (gender == "female").reshape(-1)
+            elif category == "ADULT":
+                return ((age >= 18) & (age != -1)).reshape(-1)
+            elif category == "CHILDREN":
+                return ((age < 18) & (age != -1)).reshape(-1)
+            else:
+                raise ValueError(f"Unknown category {category}")
+
+        x_mask = get_mask(gender, age, input_data)
+        y_mask = get_mask(gender, age, target_data)
+
+        self.x_data = torch.tensor(latents[x_mask], dtype=torch.float32)
+        self.y_data = torch.tensor(latents[y_mask], dtype=torch.float32)
+        self.cfg = Config()
+        self.relative_mass = None
+        self.time_steps = np.array([0., 1.])
+        self.max_time = np.max(self.time_steps)
+
+    def sample_batch(self, x, batch_size):
+        indices = torch.randint(0, x.shape[0], (batch_size,))
+        return x[indices]
+
+    def sample_particles_batch(self, batch_size):
+        data_train = {
+            0: self.sample_batch(self.x_data, batch_size).to(self.cfg.device),
+            1: self.sample_batch(self.y_data, batch_size).to(self.cfg.device)
+        }
+        return data_train
+
+    def get_all_particles_batch(self):
+        data_train = {
+            0: self.x_data.to(self.cfg.device),
+            1: self.y_data.to(self.cfg.device)
+        }
+        return data_train
+
+
 class UCF101Dataset:
     def __init__(self):
         # self.data_path = "./datasets/ucf101_breaststroke_latents_new.pt"
